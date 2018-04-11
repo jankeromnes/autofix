@@ -14,7 +14,7 @@ defaults: &clang-tidy
           ./mach configure --enable-clang-plugin
           ./mach build-backend --backend=CompileDB
           export TERM=xterm-256color
-          run-clang-tidy-6.0.py -p obj-x86_64-pc-linux-gnu/ -fix -checks=-*,$CIRCLE_JOB js 2>&1 | grep -v header-filter | grep -v Suppressed | grep -v "generated\."
+          run-clang-tidy-6.0.py -p obj-x86_64-pc-linux-gnu/ -fix -checks=-*,$CIRCLE_JOB accessible browser chrome docshell dom gfx intl ipc js layout media mobile netwerk toolkit widget 2>&1 | grep -v header-filter | grep -v Suppressed | grep -v "generated\."
           if [ ! -z "$(git status --porcelain)" ]; then
             git commit -am "Autofix (clang-tidy: $CIRCLE_JOB)"
             git show
