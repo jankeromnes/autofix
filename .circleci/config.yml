@@ -6,7 +6,7 @@ defaults: &firefox-git
 defaults: &clang-tidy
   steps:
     - run:
-        no_output_timeout: 90m
+        no_output_timeout: 300m
         command: |
           git config --global user.name "Jan Keromnes"
           git config --global user.email "janx@linux.com"
@@ -17,7 +17,7 @@ defaults: &clang-tidy
           run-clang-tidy-6.0.py -p obj-x86_64-pc-linux-gnu/ -fix -checks=-*,$CIRCLE_JOB accessible browser chrome docshell dom gfx intl ipc js layout media mobile netwerk toolkit widget 2>&1 | grep -v header-filter | grep -v Suppressed | grep -v "generated\."
           if [ ! -z "$(git status --porcelain)" ]; then
             git commit -am "Autofix (clang-tidy: $CIRCLE_JOB)"
-            git show
+            git --no-pager show
           fi
 
 version: 2.0
@@ -26,7 +26,7 @@ jobs:
     <<: *firefox-git
     steps:
       - run:
-          no_output_timeout: 90m
+          no_output_timeout: 300m
           command: |
             git config --global user.name "Jan Keromnes"
             git config --global user.email "janx@linux.com"
@@ -37,7 +37,7 @@ jobs:
               ./mach lint --linter $linter --fix 2>&1
               if [ ! -z "$(git status --porcelain)" ]; then
                 git commit -am "Autofix (mozlint: $linter)"
-                git show
+                git --no-pager show
                 git branch "mozlint-$linter"
               fi ;
             done
