@@ -8,8 +8,8 @@ defaults: &clang-tidy
     - run:
         no_output_timeout: 300m
         command: |
-          git config --global user.name "Jan Keromnes"
-          git config --global user.email "janx@linux.com"
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
           git checkout -b "clang-tidy-$CIRCLE_JOB"
           ./mach configure --enable-clang-plugin
           ./mach build-backend --backend=CompileDB
@@ -28,8 +28,8 @@ jobs:
       - run:
           no_output_timeout: 300m
           command: |
-            git config --global user.name "Jan Keromnes"
-            git config --global user.email "janx@linux.com"
+            git config --global user.name "$GIT_USER_NAME"
+            git config --global user.email "$GIT_USER_EMAIL"
             sudo apt-get update -q && sudo apt-get install -qy codespell shellcheck
             export TERM=xterm-256color
             for linter in $(./mach lint --list | sed "s_.*\['\(.*\)'\]_\1_" | sed "s_', '_\n_g") ; do
