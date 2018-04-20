@@ -3,21 +3,50 @@ defaults: &firefox-git
     - image: janitortechnology/firefox:latest
   working_directory: /home/user/firefox
 
-defaults: &clang-tidy
+defaults: &clang-tidy-all
   steps:
     - run:
         no_output_timeout: 300m
         command: |
           git config --global user.name "$GIT_USER_NAME"
           git config --global user.email "$GIT_USER_EMAIL"
-          git checkout -b "clang-tidy-$CIRCLE_JOB"
+          git config --global hub.protocol "https"
+          mkdir -p ~/.config
+          printf "github.com:\n- user: $GITHUB_LOGIN\n  oauth_token: $GITHUB_TOKEN\n  protocol: https\n" > ~/.config/hub
+          printf "machine github.com\nlogin $GITHUB_LOGIN\npassword $GITHUB_TOKEN\n" > ~/.netrc
+          hub fork
+          git checkout -b "clang-tidy-$CIRCLE_JOB" origin/master
           ./mach configure --enable-clang-plugin
           ./mach build-backend --backend=CompileDB
           export TERM=xterm-256color
-          run-clang-tidy-6.0.py -p obj-x86_64-pc-linux-gnu/ -fix -checks=-*,$CIRCLE_JOB accessible browser chrome docshell dom gfx intl ipc js layout media mobile netwerk toolkit widget 2>&1 | grep -v header-filter | grep -v Suppressed | grep -v "generated\."
+          run-clang-tidy-6.0.py -p obj-x86_64-pc-linux-gnu/ -fix -checks=-*,$CIRCLE_JOB * 2>&1 | grep -v header-filter | grep -v Suppressed | grep -v "generated\."
           if [ ! -z "$(git status --porcelain)" ]; then
             git commit -am "Autofix (clang-tidy: $CIRCLE_JOB)"
             git --no-pager show
+            hub push $GITHUB_LOGIN "clang-tidy-$CIRCLE_JOB"
+          fi
+
+defaults: &clang-tidy-partial
+  steps:
+    - run:
+        no_output_timeout: 300m
+        command: |
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
+          git config --global hub.protocol "https"
+          mkdir -p ~/.config
+          printf "github.com:\n- user: $GITHUB_LOGIN\n  oauth_token: $GITHUB_TOKEN\n  protocol: https\n" > ~/.config/hub
+          printf "machine github.com\nlogin $GITHUB_LOGIN\npassword $GITHUB_TOKEN\n" > ~/.netrc
+          hub fork
+          git checkout -b "clang-tidy-$CIRCLE_JOB" origin/master
+          ./mach configure --enable-clang-plugin
+          ./mach build-backend --backend=CompileDB
+          export TERM=xterm-256color
+          run-clang-tidy-6.0.py -p obj-x86_64-pc-linux-gnu/ -fix -checks=-*,$CIRCLE_JOB accessible browser chrome docshell gfx intl ipc media mobile netwerk toolkit widget 2>&1 | grep -v header-filter | grep -v Suppressed | grep -v "generated\."
+          if [ ! -z "$(git status --porcelain)" ]; then
+            git commit -am "Autofix (clang-tidy: $CIRCLE_JOB)"
+            git --no-pager show
+            hub push $GITHUB_LOGIN "clang-tidy-$CIRCLE_JOB"
           fi
 
 version: 2.0
@@ -30,1177 +59,1182 @@ jobs:
           command: |
             git config --global user.name "$GIT_USER_NAME"
             git config --global user.email "$GIT_USER_EMAIL"
+            git config --global hub.protocol "https"
+            mkdir -p ~/.config
+            printf "github.com:\n- user: $GITHUB_LOGIN\n  oauth_token: $GITHUB_TOKEN\n  protocol: https\n" > ~/.config/hub
+            printf "machine github.com\nlogin $GITHUB_LOGIN\npassword $GITHUB_TOKEN\n" > ~/.netrc
+            hub fork
             sudo apt-get update -q && sudo apt-get install -qy codespell shellcheck
             export TERM=xterm-256color
             for linter in $(./mach lint --list | sed "s_.*\['\(.*\)'\]_\1_" | sed "s_', '_\n_g") ; do
-              git reset --hard origin/master
+              git checkout -b "mozlint-$linter" origin/master
               ./mach lint --linter $linter --fix 2>&1
               if [ ! -z "$(git status --porcelain)" ]; then
                 git commit -am "Autofix (mozlint: $linter)"
                 git --no-pager show
-                git branch "mozlint-$linter"
+                hub push $GITHUB_LOGIN "mozlint-$linter"
               fi ;
             done
 
   android-cloexec-accept:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-accept4:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-creat:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   android-cloexec-dup:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-epoll-create:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   android-cloexec-epoll-create1:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-fopen:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-inotify-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-inotify-init1:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-memfd-create:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-open:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   android-cloexec-socket:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   boost-use-to-string:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-argument-comment:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-assert-side-effect:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-bool-pointer-implicit-conversion:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-copy-constructor-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-dangling-handle:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-fold-init-type:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-forward-declaration-namespace:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-inaccurate-erase:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   bugprone-integer-division:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-misplaced-operator-in-strlen-in-alloc:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   bugprone-move-forwarding-reference:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-multiple-statement-macro:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-string-constructor:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-suspicious-memset-usage:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-undefined-memory-manipulation:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-use-after-move:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   bugprone-virtual-near-miss:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   cert-dcl03-c:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-dcl21-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-dcl50-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-dcl54-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-dcl58-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-dcl59-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-env33-c:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-err09-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   cert-err34-c:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-err52-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   cert-err58-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-err60-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-err61-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-fio38-c:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-flp30-c:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-msc30-c:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-msc50-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cert-oop11-cpp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-apiModeling.google.GTest:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.CallAndMessage:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.DivideZero:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.DynamicTypePropagation:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.NonNullParamChecker:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.NonnilStringConstants:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.NullDereference:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.StackAddressEscape:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.UndefinedBinaryOperatorResult:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.VLASize:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.builtin.BuiltinFunctions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.builtin.NoReturnFunctions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.uninitialized.ArraySubscript:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-core.uninitialized.Assign:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.uninitialized.Branch:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.uninitialized.CapturedBlockVariable:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-core.uninitialized.UndefReturn:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-cplusplus.NewDelete:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-cplusplus.NewDeleteLeaks:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-cplusplus.SelfAssignment:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-deadcode.DeadStores:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-llvm.Conventions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-nullability.NullPassedToNonnull:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-nullability.NullReturnedFromNonnull:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-nullability.NullableDereferenced:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-nullability.NullablePassedToNonnull:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-nullability.NullableReturnedFromNonnull:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-optin.cplusplus.VirtualCall:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-optin.mpi.MPI-Checker:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-optin.performance.Padding:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-optin.portability.UnixAPI:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.API:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.NumberObjectConversion:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.ObjCProperty:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.SecKeychainAPI:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.AtSync:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.ClassRelease:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.Dealloc:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.IncompatibleMethodTypes:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.Loops:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.cocoa.MissingSuperCall:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.NSAutoreleasePool:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.NSError:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.NilArg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.NonNilReturnValue:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.ObjCGenerics:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.RetainCount:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.cocoa.SelfInit:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.SuperDealloc:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.UnusedIvars:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.cocoa.VariadicMethodTypes:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.coreFoundation.CFError:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.coreFoundation.CFNumber:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.coreFoundation.CFRetainRelease:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.coreFoundation.containers.OutOfBounds:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-osx.coreFoundation.containers.PointerSizedValues:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.FloatLoopCounter:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.UncheckedReturn:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.getpw:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.gets:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.mkstemp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.mktemp:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.rand:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   clang-analyzer-security.insecureAPI.strcpy:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-security.insecureAPI.vfork:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.API:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.Malloc:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.MallocSizeof:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.MismatchedDeallocator:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.StdCLibraryFunctions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.Vfork:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.cstring.BadSizeArg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-unix.cstring.NullArg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-valist.CopyToSelf:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-valist.Uninitialized:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   clang-analyzer-valist.Unterminated:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-c-copy-assignment-signature:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-interfaces-global-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-no-malloc:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-owning-memory:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-bounds-array-to-pointer-decay:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-bounds-constant-array-index:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-bounds-pointer-arithmetic:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-type-const-cast:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-pro-type-cstyle-cast:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-type-member-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-type-reinterpret-cast:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-type-static-cast-downcast:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-pro-type-union-access:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-pro-type-vararg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   cppcoreguidelines-slicing:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-special-member-functions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   fuchsia-default-arguments:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   fuchsia-overloaded-operator:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   fuchsia-virtual-inheritance:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-build-explicit-make-pair:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-build-namespaces:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-build-using-namespace:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-default-arguments:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-explicit-constructor:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   google-global-names-in-headers:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   google-objc-avoid-throwing-exception:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-objc-global-variable-declaration:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-readability-braces-around-statements:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-readability-casting:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-readability-function-size:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-readability-namespace-comments:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-readability-redundant-smartptr-get:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   google-readability-todo:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-runtime-int:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-runtime-member-string-references:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-runtime-operator:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   google-runtime-references:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-braces-around-statements:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-deprecated-headers:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-exception-baseclass:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-explicit-conversions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-function-size:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-invalid-access-moved:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-member-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-move-const-arg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-named-parameter:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-new-delete-operators:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-no-array-decay:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-no-assembler:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-no-malloc:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-noexcept-move:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-signed-bitwise:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-special-member-functions:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-static-assert:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-undelegated-constructor:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-use-auto:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-use-emplace:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-use-equals-default:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-use-equals-delete:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-use-noexcept:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   hicpp-use-nullptr:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-use-override:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   hicpp-vararg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   llvm-header-guard:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   llvm-include-order:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   llvm-namespace-comment:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   llvm-twine-local:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-definitions-in-headers:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-forwarding-reference-overload:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-incorrect-roundings:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-lambda-function-name:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-macro-parentheses:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-macro-repeated-side-effects:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-misplaced-const:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   misc-misplaced-widening-cast:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-new-delete-overloads:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-non-copyable-objects:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-redundant-expression:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-sizeof-container:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-sizeof-expression:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-static-assert:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-string-compare:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-string-integer-assignment:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-string-literal-with-embedded-nul:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-suspicious-enum-usage:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-suspicious-missing-comma:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-suspicious-semicolon:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-suspicious-string-compare:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-swapped-arguments:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-throw-by-value-catch-by-reference:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-unconventional-assign-operator:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-undelegated-constructor:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-uniqueptr-reset-release:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-unused-alias-decls:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-unused-parameters:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-unused-raii:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   misc-unused-using-decls:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-avoid-bind:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   modernize-deprecated-headers:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-loop-convert:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-make-shared:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-make-unique:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-pass-by-value:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-raw-string-literal:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-redundant-void-arg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   modernize-replace-auto-ptr:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-replace-random-shuffle:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-return-braced-init-list:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-shrink-to-fit:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   modernize-unary-static-assert:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-auto:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-bool-literals:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-default-member-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-emplace:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-equals-default:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-equals-delete:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-noexcept:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-nullptr:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-override:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   modernize-use-transparent-functors:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   modernize-use-using:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   mpi-buffer-deref:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   mpi-type-mismatch:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   objc-avoid-nserror-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   objc-avoid-spinlock:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   objc-forbidden-subclassing:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   objc-property-declaration:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-faster-string-find:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-for-range-copy:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-implicit-conversion-in-loop:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-inefficient-algorithm:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-inefficient-string-concatenation:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-inefficient-vector-operation:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-move-const-arg:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-move-constructor-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-noexcept-move-constructor:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-type-promotion-in-math-fn:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-unnecessary-copy-initialization:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   performance-unnecessary-value-param:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-avoid-const-params-in-decls:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-braces-around-statements:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-container-size-empty:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-delete-null-pointer:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-deleted-default:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-else-after-return:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   readability-function-size:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-identifier-naming:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-implicit-bool-conversion:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-inconsistent-declaration-parameter-name:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-misleading-indentation:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-misplaced-array-index:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-named-parameter:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-non-const-parameter:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-redundant-control-flow:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-redundant-declaration:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-redundant-function-ptr-dereference:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-redundant-member-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-redundant-smartptr-get:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-redundant-string-cstr:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-partial
 
   readability-redundant-string-init:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-simplify-boolean-expr:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-static-accessed-through-instance:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-static-definition-in-anonymous-namespace:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
   readability-uniqueptr-delete-release:
     <<: *firefox-git
-    <<: *clang-tidy
+    <<: *clang-tidy-all
 
 
 workflows:
