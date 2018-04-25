@@ -15,7 +15,7 @@ defaults: &clang-tidy-all
           printf "github.com:\n- user: $GITHUB_LOGIN\n  oauth_token: $GITHUB_TOKEN\n  protocol: https\n" > ~/.config/hub
           printf "machine github.com\nlogin $GITHUB_LOGIN\npassword $GITHUB_TOKEN\n" > ~/.netrc
           hub fork
-          git checkout -b "clang-tidy-$CIRCLE_JOB" origin/master
+          git checkout -b "autofix-clang-tidy-$CIRCLE_JOB" origin/master
           ./mach configure --enable-clang-plugin
           ./mach build-backend --backend=CompileDB
           export TERM=xterm-256color
@@ -23,7 +23,7 @@ defaults: &clang-tidy-all
           if [ ! -z "$(git status --porcelain)" ]; then
             git commit -am "Autofix (clang-tidy: $CIRCLE_JOB)"
             git --no-pager show
-            hub push $GITHUB_LOGIN "clang-tidy-$CIRCLE_JOB"
+            hub push $GITHUB_LOGIN "autofix-clang-tidy-$CIRCLE_JOB"
           fi
 
 defaults: &clang-tidy-partial
@@ -38,7 +38,7 @@ defaults: &clang-tidy-partial
           printf "github.com:\n- user: $GITHUB_LOGIN\n  oauth_token: $GITHUB_TOKEN\n  protocol: https\n" > ~/.config/hub
           printf "machine github.com\nlogin $GITHUB_LOGIN\npassword $GITHUB_TOKEN\n" > ~/.netrc
           hub fork
-          git checkout -b "clang-tidy-$CIRCLE_JOB" origin/master
+          git checkout -b "autofix-clang-tidy-$CIRCLE_JOB" origin/master
           ./mach configure --enable-clang-plugin
           ./mach build-backend --backend=CompileDB
           export TERM=xterm-256color
@@ -46,7 +46,7 @@ defaults: &clang-tidy-partial
           if [ ! -z "$(git status --porcelain)" ]; then
             git commit -am "Autofix (clang-tidy: $CIRCLE_JOB)"
             git --no-pager show
-            hub push $GITHUB_LOGIN "clang-tidy-$CIRCLE_JOB"
+            hub push $GITHUB_LOGIN "autofix-clang-tidy-$CIRCLE_JOB"
           fi
 
 version: 2.0
@@ -67,12 +67,12 @@ jobs:
             sudo apt-get update -q && sudo apt-get install -qy codespell shellcheck
             export TERM=xterm-256color
             for linter in $(./mach lint --list | sed "s_.*\['\(.*\)'\]_\1_" | sed "s_', '_\n_g") ; do
-              git checkout -b "mozlint-$linter" origin/master
+              git checkout -b "autofix-mozlint-$linter" origin/master
               ./mach lint --linter $linter --fix 2>&1
               if [ ! -z "$(git status --porcelain)" ]; then
                 git commit -am "Autofix (mozlint: $linter)"
                 git --no-pager show
-                hub push $GITHUB_LOGIN "mozlint-$linter"
+                hub push $GITHUB_LOGIN "autofix-mozlint-$linter"
               fi ;
             done
 
@@ -106,7 +106,7 @@ jobs:
 
   android-cloexec-inotify-init:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   android-cloexec-inotify-init1:
     <<: *firefox-git
@@ -114,15 +114,15 @@ jobs:
 
   android-cloexec-memfd-create:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   android-cloexec-open:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   android-cloexec-socket:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   boost-use-to-string:
     <<: *firefox-git
@@ -134,7 +134,7 @@ jobs:
 
   bugprone-assert-side-effect:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   bugprone-bool-pointer-implicit-conversion:
     <<: *firefox-git
@@ -170,11 +170,11 @@ jobs:
 
   bugprone-move-forwarding-reference:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   bugprone-multiple-statement-macro:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   bugprone-string-constructor:
     <<: *firefox-git
@@ -182,7 +182,7 @@ jobs:
 
   bugprone-suspicious-memset-usage:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   bugprone-undefined-memory-manipulation:
     <<: *firefox-git
@@ -206,11 +206,11 @@ jobs:
 
   cert-dcl50-cpp:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   cert-dcl54-cpp:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   cert-dcl58-cpp:
     <<: *firefox-git
@@ -282,15 +282,15 @@ jobs:
 
   clang-analyzer-core.DynamicTypePropagation:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-core.NonNullParamChecker:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-core.NonnilStringConstants:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-core.NullDereference:
     <<: *firefox-git
@@ -330,15 +330,15 @@ jobs:
 
   clang-analyzer-core.uninitialized.CapturedBlockVariable:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-core.uninitialized.UndefReturn:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-cplusplus.NewDelete:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-cplusplus.NewDeleteLeaks:
     <<: *firefox-git
@@ -370,7 +370,7 @@ jobs:
 
   clang-analyzer-nullability.NullablePassedToNonnull:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-nullability.NullableReturnedFromNonnull:
     <<: *firefox-git
@@ -386,7 +386,7 @@ jobs:
 
   clang-analyzer-optin.osx.cocoa.localizability.EmptyLocalizationContextChecker:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-optin.osx.cocoa.localizability.NonLocalizedStringChecker:
     <<: *firefox-git
@@ -394,7 +394,7 @@ jobs:
 
   clang-analyzer-optin.performance.Padding:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-optin.portability.UnixAPI:
     <<: *firefox-git
@@ -418,7 +418,7 @@ jobs:
 
   clang-analyzer-osx.cocoa.AtSync:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.cocoa.ClassRelease:
     <<: *firefox-git
@@ -450,7 +450,7 @@ jobs:
 
   clang-analyzer-osx.cocoa.NilArg:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.cocoa.NonNilReturnValue:
     <<: *firefox-git
@@ -482,7 +482,7 @@ jobs:
 
   clang-analyzer-osx.coreFoundation.CFError:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-osx.coreFoundation.CFNumber:
     <<: *firefox-git
@@ -498,7 +498,7 @@ jobs:
 
   clang-analyzer-osx.coreFoundation.containers.PointerSizedValues:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-security.FloatLoopCounter:
     <<: *firefox-git
@@ -506,7 +506,7 @@ jobs:
 
   clang-analyzer-security.insecureAPI.UncheckedReturn:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-security.insecureAPI.getpw:
     <<: *firefox-git
@@ -570,7 +570,7 @@ jobs:
 
   clang-analyzer-valist.CopyToSelf:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   clang-analyzer-valist.Uninitialized:
     <<: *firefox-git
@@ -586,11 +586,11 @@ jobs:
 
   cppcoreguidelines-interfaces-global-init:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-no-malloc:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-owning-memory:
     <<: *firefox-git
@@ -614,7 +614,7 @@ jobs:
 
   cppcoreguidelines-pro-type-cstyle-cast:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-pro-type-member-init:
     <<: *firefox-git
@@ -622,7 +622,7 @@ jobs:
 
   cppcoreguidelines-pro-type-reinterpret-cast:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   cppcoreguidelines-pro-type-static-cast-downcast:
     <<: *firefox-git
@@ -694,7 +694,7 @@ jobs:
 
   google-readability-casting:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   google-readability-function-size:
     <<: *firefox-git
@@ -710,7 +710,7 @@ jobs:
 
   google-readability-todo:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   google-runtime-int:
     <<: *firefox-git
@@ -750,7 +750,7 @@ jobs:
 
   hicpp-invalid-access-moved:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   hicpp-member-init:
     <<: *firefox-git
@@ -766,7 +766,7 @@ jobs:
 
   hicpp-new-delete-operators:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   hicpp-no-array-decay:
     <<: *firefox-git
@@ -790,7 +790,7 @@ jobs:
 
   hicpp-special-member-functions:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   hicpp-static-assert:
     <<: *firefox-git
@@ -802,7 +802,7 @@ jobs:
 
   hicpp-use-auto:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   hicpp-use-emplace:
     <<: *firefox-git
@@ -814,7 +814,7 @@ jobs:
 
   hicpp-use-equals-delete:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   hicpp-use-noexcept:
     <<: *firefox-git
@@ -894,7 +894,7 @@ jobs:
 
   misc-sizeof-container:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   misc-sizeof-expression:
     <<: *firefox-git
@@ -902,7 +902,7 @@ jobs:
 
   misc-static-assert:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   misc-string-compare:
     <<: *firefox-git
@@ -930,7 +930,7 @@ jobs:
 
   misc-suspicious-string-compare:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   misc-swapped-arguments:
     <<: *firefox-git
@@ -950,7 +950,7 @@ jobs:
 
   misc-uniqueptr-reset-release:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   misc-unused-alias-decls:
     <<: *firefox-git
@@ -962,11 +962,11 @@ jobs:
 
   misc-unused-raii:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   misc-unused-using-decls:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-avoid-bind:
     <<: *firefox-git
@@ -978,7 +978,7 @@ jobs:
 
   modernize-loop-convert:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-make-shared:
     <<: *firefox-git
@@ -990,11 +990,11 @@ jobs:
 
   modernize-pass-by-value:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-raw-string-literal:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-redundant-void-arg:
     <<: *firefox-git
@@ -1022,11 +1022,11 @@ jobs:
 
   modernize-use-auto:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-use-bool-literals:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-use-default-member-init:
     <<: *firefox-git
@@ -1042,7 +1042,7 @@ jobs:
 
   modernize-use-equals-delete:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   modernize-use-noexcept:
     <<: *firefox-git
@@ -1062,7 +1062,7 @@ jobs:
 
   modernize-use-using:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   mpi-buffer-deref:
     <<: *firefox-git
@@ -1070,7 +1070,7 @@ jobs:
 
   mpi-type-mismatch:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   objc-avoid-nserror-init:
     <<: *firefox-git
@@ -1094,7 +1094,7 @@ jobs:
 
   performance-for-range-copy:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   performance-implicit-conversion-in-loop:
     <<: *firefox-git
@@ -1106,15 +1106,15 @@ jobs:
 
   performance-inefficient-string-concatenation:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   performance-inefficient-vector-operation:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   performance-move-const-arg:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   performance-move-constructor-init:
     <<: *firefox-git
@@ -1154,7 +1154,7 @@ jobs:
 
   readability-deleted-default:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   readability-else-after-return:
     <<: *firefox-git
@@ -1162,7 +1162,7 @@ jobs:
 
   readability-function-size:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   readability-identifier-naming:
     <<: *firefox-git
@@ -1186,7 +1186,7 @@ jobs:
 
   readability-named-parameter:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   readability-non-const-parameter:
     <<: *firefox-git
@@ -1206,7 +1206,7 @@ jobs:
 
   readability-redundant-member-init:
     <<: *firefox-git
-    <<: *clang-tidy-all
+    <<: *clang-tidy-partial
 
   readability-redundant-smartptr-get:
     <<: *firefox-git
